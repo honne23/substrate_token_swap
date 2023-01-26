@@ -9,6 +9,11 @@
 8. https://github.com/substrate-developer-hub/substrate-node-template
 9. https://github.com/substrate-developer-hub/substrate-node-template/tree/main/pallets/template/src
 10. https://www.youtube.com/watch?v=-6BBIr-DmI4&ab_channel=Polkadot
+11. https://docs.substrate.io/tutorials/integrate-with-tools/access-evm-accounts/
+12. https://github.com/substrate-developer-hub/frontier-node-template
+13. https://gitbook.jur.io/jur-documentation/architecture/token-swap
+14. https://github.com/jurteam/thor/commit/2300537eaddd1126839415642427fb9131784e59
+
 
 
 ### Proof of authority
@@ -43,3 +48,11 @@ As discussed in [Runtime development](https://docs.substrate.io/fundamentals/ru
 -   How transactions change the state of the chain.
 
 Typically, **you use pallets to compose the runtime functions and to implement the transactions that you want your chain to support.** After you compile the runtime, users interact with the blockchain to submit requests that are processed as transactions. For example, a user might submit a request to **transfer funds** from one account to another. The request becomes a **signed transaction** that contains the signature for that user account and if there are sufficient funds in the user's account to pay for the transaction, the transaction executes successfully, and the transfer is made.
+
+
+### ETH - Ganache JSON RPC
+https://github.com/trufflesuite/ganache/blob/develop/src/chains/ethereum/ethereum/RPC-METHODS.md
+
+
+### Calling JSON RPC
+https://substrate.recipes/off-chain-workers/index.html
