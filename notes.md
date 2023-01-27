@@ -13,6 +13,7 @@
 12. https://github.com/substrate-developer-hub/frontier-node-template
 13. https://gitbook.jur.io/jur-documentation/architecture/token-swap
 14. https://github.com/jurteam/thor/commit/2300537eaddd1126839415642427fb9131784e59
+15. https://docs.substrate.io/tutorials/smart-contracts/build-a-token-contract/
 
 
 
@@ -56,3 +57,7 @@ https://github.com/trufflesuite/ganache/blob/develop/src/chains/ethereum/ethereu
 
 ### Calling JSON RPC
 https://substrate.recipes/off-chain-workers/index.html
+
+### Bridge Pallets
+Receiving messages on Polkadot from an external, non-parachain blockchain can be possible through a Substrate pallet. The Substrate instance can then be **deployed to Polkadot either as a system-level parachain** (native extension to the core Polkadot software) or as a community-operated parachain.
+- Frontier node must be deployed as a parachain
