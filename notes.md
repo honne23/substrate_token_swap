@@ -57,6 +57,16 @@ https://github.com/trufflesuite/ganache/blob/develop/src/chains/ethereum/ethereu
 
 ### Calling JSON RPC
 https://substrate.recipes/off-chain-workers/index.html
+#### Ganache RPC
+##### eth_subscribe
+Starts a subscription to a particular event. For every event that matches the subscription a JSON-RPC notification with event details and subscription ID will be sent to a client.
+
+Arguments
+subscriptionName: Ethereum.SubscriptionName : Name for the subscription.
+Returns
+PromiEvent<QUANTITY> : A subscription id.
+
+---
 
 ### Bridge Pallets
 Receiving messages on Polkadot from an external, non-parachain blockchain can be possible through a Substrate pallet. The Substrate instance can then be **deployed to Polkadot either as a system-level parachain** (native extension to the core Polkadot software) or as a community-operated parachain.
