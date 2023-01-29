@@ -1,7 +1,7 @@
 
 
 ## Brief
-If wallet 0xf346f1ab880d5b2cd0333bf69c280a732fa4a1c4 has 100M ETH Tokens this balance needs to be reflected in the new wallet address that this holder will have in the new parachain.
+If wallet 0xf346f1ab880d5b2cd0333bf69c280a732fa4a1c4 has 100M JUR Tokens this balance needs to be reflected in the new wallet address that this holder will have in the new parachain.
 
 ### Dev plan
 ```
