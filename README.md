@@ -4,31 +4,20 @@ For a given ETH wallet:
 
 ### Dev plan
 ```
-       ┌─────────────────┐
-       │                 │
-       │                 │
-       │     Ganache     │
-       │                 │
-       │                 │
-       └────────┬────────┘
-                │
-                │                                                               ┌────────────────────┐
-          ┌─────▼────────┐                                                      │                    │
-          │              │                                                      │      Frontier      │
-          │   JURToken   │                                                      │       Runtime      │ Submit to parchain / relay
-   Mint   │     .sol     │                                                      │                    │
-   Tokens │              │                                                      │                    │
-          │              │                                                      └─────────▲──────────┘
-          └─────┬────────┘                                                                │
-                │                                                                         │ Contract API
-                │                                                                         │
-           ┌────▼─────────┐               ┌────────────────────────┐               ┌──────┴──────┐
-           │              │               │                        │               │             │
- Lock Funds│              │               │                        │               │  Substrate  │
-           │  JURBridge   │◄──────────────┤    Relay Web Server    ├───────────────►  Contract   │ Mint Tokens
-           │     .sol     │    JSON-RPC   │       (Node.js)        │   JSON-RPC    │             │
-           │              │     (Signed)  │                        │    (Signed)   │             │
-           └──────────────┘               └────────────────────────┘               └─────────────┘
+
+ ┌──────────────┐                                              ┌────────────────────┐
+ │              │                                              │                    │
+ │  ETH Wallet  │                                              │ Parachain Wallet   │
+ │              │                                              │                    │
+ └───────┬──────┘                                              └───────▲────────────┘
+         │                                                             │
+         │      Transfer                                               │   Mint Tokens
+ ┌───────▼──────┐ Req    ┌───────────────────────────┐ Mint RPC┌───────┴────────────┐
+ │              ├───────►│                           ├────────►│                    │
+ │ JURBridge.sol│        │    Node.js Relay (Bridge) │         │  JURToken.rs       │
+ │              │◄───────┤                           │◄────────┤                    │
+ └──────────────┘        └───────────────────────────┘ ACK     └────────────────────┘
+  Lock Token                    Register  Users
 
 ```
 **Please see the [plan](plan.md) and [notes](notes.md) for more details.**
