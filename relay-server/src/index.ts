@@ -29,10 +29,6 @@ app.use(bodyParser.json());
 
 const port = 8080; // default port to listen
 
-// define a route handler for the default home page
-app.get( "/", ( req, res ) => {
-    res.send( "Hello world!" );
-});
 
 // Server-side secure
 app.post("/register", async (req, res) => {
