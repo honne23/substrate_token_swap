@@ -14,6 +14,7 @@
 13. https://gitbook.jur.io/jur-documentation/architecture/token-swap
 14. https://github.com/jurteam/thor/commit/2300537eaddd1126839415642427fb9131784e59
 15. https://docs.substrate.io/tutorials/smart-contracts/build-a-token-contract/
+16. https://techblog.dac.digital/ethereum-signatures-and-transactions-using-a-hardware-wallet-10a88f344caf
 
 
 
@@ -71,3 +72,18 @@ PromiEvent<QUANTITY> : A subscription id.
 ### Bridge Pallets
 Receiving messages on Polkadot from an external, non-parachain blockchain can be possible through a Substrate pallet. The Substrate instance can then be **deployed to Polkadot either as a system-level parachain** (native extension to the core Polkadot software) or as a community-operated parachain.
 - Frontier node must be deployed as a parachain
+
+
+### Verify event signatures in the substrate smart contract
+The signature scheme used by Ethereum is the Elliptic Curve Digital Signature Algorithm or ECDSA for short. A digital signature takes as an input the message to be signed (payload) and the private key. The result of ECDSA signing is a signature consisting of 2 integers r and s.
+
+As part of payload preparation, the message is hashed, so that ECDSA can always operate on payloads of a fixed size. For a valid Ethereum transaction, we must sign the Keccak-256 hash of an encoded transaction payload (the fields describing the transaction):
+```js
+transaction = {
+    'to': Web3.toChecksumAddress('0x4d6bb4ed029b33cf25d0810b029bd8b1a6bcab7b'),
+    'gas': 21000,
+    'gasPrice': 10000000000,
+    'nonce': 1,
+    'value': 1,
+}
+```
