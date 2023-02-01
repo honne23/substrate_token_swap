@@ -91,7 +91,8 @@ mod jurbridge {
             if !self.bridge_accounts.contains(&from) {
                 self.bridge_accounts.insert(from.clone(), &to);
             }
-            self.balances.insert(to, &value);
+            let from_balance = self.balance_of_impl(&to);
+            self.balances.insert(to, &(value + from_balance));
             Self::env().emit_event(SwapFinalised {
                 from,
                 to,
@@ -126,6 +127,8 @@ mod jurbridge {
         fn balance_of_impl(&self, owner: &AccountId) -> Balance {
             self.balances.get(owner).unwrap_or_default()
         }
+
+        /// 
 
         /// Returns the amount which `spender` is still allowed to withdraw from `owner`.
         ///

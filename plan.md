@@ -4,32 +4,20 @@
 If wallet 0xf346f1ab880d5b2cd0333bf69c280a732fa4a1c4 has 100M JUR Tokens this balance needs to be reflected in the new wallet address that this holder will have in the new parachain.
 
 ### Dev plan
-```
-       ┌─────────────────┐
-       │                 │
-       │                 │
-       │     Ganache     │
-       │                 │
-       │                 │
-       └────────┬────────┘
-                │
-                │                                                               ┌────────────────────┐
-          ┌─────▼────────┐                                                      │                    │
-          │              │                                                      │      Frontier      │
-          │   JURToken   │                                                      │       Runtime      │ Submit to parchain / relay
-   Mint   │     .sol     │                                                      │                    │
-   Tokens │              │                                                      │                    │
-          │              │                                                      └─────────▲──────────┘
-          └─────┬────────┘                                                                │
-                │                                                                         │ Contract API
-                │                                                                         │
-           ┌────▼─────────┐               ┌────────────────────────┐               ┌──────┴──────┐
-           │              │               │                        │               │             │
- Lock Funds│              │               │                        │               │  Substrate  │
-           │  JURBridge   │◄──────────────┤    Relay Web Server    ├───────────────►  Contract   │ Mint Tokens
-           │     .sol     │    JSON-RPC   │       (Node.js)        │   JSON-RPC    │             │
-           │              │     (Signed)  │                        │    (Signed)   │             │
-           └──────────────┘               └────────────────────────┘               └─────────────┘
+
+ ┌──────────────┐                                              ┌────────────────────┐
+ │              │                                              │                    │
+ │  ETH Wallet  │                                              │ Parachain Wallet   │
+ │              │                                              │                    │
+ └───────┬──────┘                                              └───────▲────────────┘
+         │                                                             │
+         │      Transfer                                               │   Mint Tokens
+ ┌───────▼──────┐ Req    ┌───────────────────────────┐ Mint RPC┌───────┴────────────┐
+ │              ├───────►│                           ├────────►│                    │
+ │ JURBridge.sol│        │    Node.js Relay (Bridge) │         │  JURToken.rs       │
+ │              │◄───────┤                           │◄────────┤                    │
+ └──────────────┘        └───────────────────────────┘ ACK     └────────────────────┘
+  Lock Token                    Register  Users
 
 ```
 1. Spin up Ganache locally to simulate an ethereum network

@@ -3,5 +3,6 @@ polkadot/
 relay/node_modules/
 relay/yarn.lock
 node_modules/
+cumulus/
 yarn.lock
 package-lock.json
