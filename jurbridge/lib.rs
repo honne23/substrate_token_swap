@@ -45,9 +45,9 @@ mod jurbridge {
     #[ink(event)]
     pub struct SwapFinalised {
         #[ink(topic)]
-        from: Vec<u8>,
+        from: Option<Vec<u8>>,
         #[ink(topic)]
-        to: AccountId,
+        to: Option<AccountId>,
         value: Balance,
     }
 
@@ -94,9 +94,9 @@ mod jurbridge {
             let from_balance = self.balance_of_impl(&to);
             self.balances.insert(to, &(value + from_balance));
             Self::env().emit_event(SwapFinalised {
-                from,
-                to,
-                value
+                from: Some(from),
+                to: Some(to),
+                value: value
             });
             Ok(())
         }
@@ -274,19 +274,68 @@ mod jurbridge {
             }
             let expected_topics = vec![
                 encoded_into_hash(&PrefixedValue {
-                    value: b"Erc20::Transfer",
+                    value: b"JurBridge::Transfer",
                     prefix: b"",
                 }),
                 encoded_into_hash(&PrefixedValue {
-                    prefix: b"Erc20::Transfer::from",
+                    prefix: b"JurBridge::Transfer::from",
                     value: &expected_from,
                 }),
                 encoded_into_hash(&PrefixedValue {
-                    prefix: b"Erc20::Transfer::to",
+                    prefix: b"JurBridge::Transfer::to",
                     value: &expected_to,
                 }),
                 encoded_into_hash(&PrefixedValue {
-                    prefix: b"Erc20::Transfer::value",
+                    prefix: b"JurBridge::Transfer::value",
+                    value: &expected_value,
+                }),
+            ];
+
+            let topics = event.topics.clone();
+            for (n, (actual_topic, expected_topic)) in
+                topics.iter().zip(expected_topics).enumerate()
+            {
+                let mut topic_hash = Hash::clear();
+                let len = actual_topic.len();
+                topic_hash.as_mut()[0..len].copy_from_slice(&actual_topic[0..len]);
+
+                assert_eq!(
+                    topic_hash, expected_topic,
+                    "encountered invalid topic at {n}"
+                );
+            }
+        }
+
+        fn assert_mint_event(
+            event: &ink_env::test::EmittedEvent,
+            expected_eth: Option<Vec<u8>>,
+            expected_to: Option<AccountId>,
+            expected_value: Balance,
+        ) {
+            let decoded_event = <Event as scale::Decode>::decode(&mut &event.data[..])
+                .expect("encountered invalid contract event data buffer");
+            if let Event::SwapFinalised(SwapFinalised { from, to, value }) = decoded_event {
+                assert_eq!(from, expected_eth, "encountered invalid SwapFinalised.from");
+                assert_eq!(to, expected_to, "encountered invalid SwapFinalised.to");
+                assert_eq!(value, expected_value, "encountered invalid SwapFinalised.value");
+            } else {
+                panic!("encountered unexpected event kind: expected a Transfer event")
+            }
+            let expected_topics = vec![
+                encoded_into_hash(&PrefixedValue {
+                    value: b"JurBridge::SwapFinalised",
+                    prefix: b"",
+                }),
+                encoded_into_hash(&PrefixedValue {
+                    prefix: b"JurBridge::SwapFinalised::from",
+                    value: &expected_eth,
+                }),
+                encoded_into_hash(&PrefixedValue {
+                    prefix: b"JurBridge::SwapFinalised::to",
+                    value: &expected_to,
+                }),
+                encoded_into_hash(&PrefixedValue {
+                    prefix: b"JurBridge::SwapFinalised::value",
                     value: &expected_value,
                 }),
             ];
@@ -320,7 +369,7 @@ mod jurbridge {
                 &emitted_events[0],
                 None,
                 Some(AccountId::from([0x01; 32])),
-                100,
+                0,
             );
         }
 
@@ -328,14 +377,24 @@ mod jurbridge {
         #[ink::test]
         fn total_supply_works() {
             // Constructor works.
-            let erc20 = JurBridge::new();
+            let mut erc20 = JurBridge::new();
+            
+            // Setup accounts
+            let accounts =
+                ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+
+            // Mint tokens
+            let eth_dummy = vec![0;32];
+            assert!(erc20.mint_bridge(eth_dummy.clone(), accounts.alice, 100).is_ok());
+
             // Transfer event triggered during initial construction.
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
-            assert_transfer_event(
-                &emitted_events[0],
-                None,
-                Some(AccountId::from([0x01; 32])),
-                0,
+
+            assert_mint_event(
+                &emitted_events[1],
+                Some(eth_dummy),
+                Some(accounts.alice),
+                100,
             );
             // Get the token total supply.
             assert_eq!(erc20.total_supply(), 100);
@@ -344,22 +403,35 @@ mod jurbridge {
         /// Get the actual balance of an account.
         #[ink::test]
         fn balance_of_works() {
+            // Setup accounts
+            let accounts =
+                ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+
             // Constructor works
-            let erc20 = JurBridge::new();
-            // Transfer event triggered during initial construction
+            let mut erc20 = JurBridge::new();
+
+            // Mint tokens into account
+            let eth_dummy = vec![0;32];
+            assert!(erc20.mint_bridge(eth_dummy.clone(), accounts.alice, 100).is_ok());
+
+            // Transfer & SwapInitiated events triggered during initial construction
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
+            assert_eq!(2, emitted_events.len());
             assert_transfer_event(
                 &emitted_events[0],
                 None,
-                Some(AccountId::from([0x01; 32])),
+                Some(accounts.alice),
+                0,
+            );
+            assert_mint_event(
+                &emitted_events[1],
+                Some(eth_dummy),
+                Some(accounts.alice),
                 100,
             );
-            let accounts =
-                ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
-            // Alice owns all the tokens on contract instantiation
+            
+            // Alice owns all the tokens on mint instantiation
             assert_eq!(erc20.balance_of(accounts.alice), 100);
-            // Bob does not owns tokens
-            assert_eq!(erc20.balance_of(accounts.bob), 0);
         }
 
         #[ink::test]
@@ -369,6 +441,10 @@ mod jurbridge {
             // Transfer event triggered during initial construction.
             let accounts =
                 ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+            
+            // Mint tokens
+            let eth_dummy = vec![0;32];
+            assert!(erc20.mint_bridge(eth_dummy.clone(), accounts.alice, 100).is_ok());
 
             assert_eq!(erc20.balance_of(accounts.bob), 0);
             // Alice transfers 10 tokens to Bob.
@@ -377,17 +453,17 @@ mod jurbridge {
             assert_eq!(erc20.balance_of(accounts.bob), 10);
 
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
-            assert_eq!(emitted_events.len(), 2);
+            assert_eq!(emitted_events.len(), 3);
             // Check first transfer event related to ERC-20 instantiation.
             assert_transfer_event(
                 &emitted_events[0],
                 None,
                 Some(AccountId::from([0x01; 32])),
-                100,
+                0,
             );
             // Check the second transfer event relating to the actual trasfer.
             assert_transfer_event(
-                &emitted_events[1],
+                &emitted_events[2],
                 Some(AccountId::from([0x01; 32])),
                 Some(AccountId::from([0x02; 32])),
                 10,
@@ -400,6 +476,9 @@ mod jurbridge {
             let mut erc20 = JurBridge::new();
             let accounts =
                 ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+            // Mint tokens
+            let eth_dummy = vec![0;32];
+            assert!(erc20.mint_bridge(eth_dummy.clone(), accounts.alice, 100).is_ok());
 
             assert_eq!(erc20.balance_of(accounts.bob), 0);
 
@@ -420,11 +499,11 @@ mod jurbridge {
 
             // Transfer event triggered during initial construction.
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
-            assert_eq!(emitted_events.len(), 1);
-            assert_transfer_event(
-                &emitted_events[0],
-                None,
-                Some(AccountId::from([0x01; 32])),
+            assert_eq!(emitted_events.len(), 2);
+            assert_mint_event(
+                &emitted_events[1],
+                Some(eth_dummy),
+                Some(accounts.alice),
                 100,
             );
         }
@@ -436,6 +515,10 @@ mod jurbridge {
             // Transfer event triggered during initial construction.
             let accounts =
                 ink_env::test::default_accounts::<ink_env::DefaultEnvironment>();
+            
+            // Mint tokens
+            let eth_dummy = vec![0;32];
+            assert!(erc20.mint_bridge(eth_dummy.clone(), accounts.alice, 100).is_ok());
 
             // Bob fails to transfer tokens owned by Alice.
             assert_eq!(
@@ -446,7 +529,7 @@ mod jurbridge {
             assert_eq!(erc20.approve(accounts.bob, 10), Ok(()));
 
             // The approve event takes place.
-            assert_eq!(ink_env::test::recorded_events().count(), 2);
+            assert_eq!(ink_env::test::recorded_events().count(),3);
 
             // Set the contract as callee and Bob as caller.
             let contract = ink_env::account_id::<ink_env::DefaultEnvironment>();
@@ -463,16 +546,16 @@ mod jurbridge {
 
             // Check all transfer events that happened during the previous calls:
             let emitted_events = ink_env::test::recorded_events().collect::<Vec<_>>();
-            assert_eq!(emitted_events.len(), 3);
-            assert_transfer_event(
-                &emitted_events[0],
-                None,
+            assert_eq!(emitted_events.len(), 4);
+            assert_mint_event(
+                &emitted_events[1],
+                Some(eth_dummy),
                 Some(AccountId::from([0x01; 32])),
                 100,
             );
             // The second event `emitted_events[1]` is an Approve event that we skip checking.
             assert_transfer_event(
-                &emitted_events[2],
+                &emitted_events[3],
                 Some(AccountId::from([0x01; 32])),
                 Some(AccountId::from([0x05; 32])),
                 10,
