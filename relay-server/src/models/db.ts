@@ -8,7 +8,19 @@ const userDoesntExistError = new Error("user does not exist");
 
 
 export interface IDatabase {
+    /**
+     * A function to register a mapping of an ETH wallet to a substrate wallet.
+     * @param {string} ethAddress - The ETH address to register in the databse
+     * @param {string} keyUri - The URI to generate the substrate keypair
+     * @returns {Promise<Result<Unit, Error>>} Empty {@link Result} if successful otherwise {@link Error}
+     */
     registerUser(ethAddress: string, keyUri: string): Promise<Result<Unit, Error>>;
+
+    /**
+     * A function used to get an existing user, throws an error if the user doesn't already exist.
+     * @param {string} ethAddress - The ETH address key used to find the existing substrate keypair
+     * @returns {Result<KeyringPair, Error>} Returns {@link KeyringPair} if successful otherwise {@link Error}
+     */
     getUser(ethAddress: string): Result<KeyringPair, Error>;
 }
 

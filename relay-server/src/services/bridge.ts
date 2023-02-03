@@ -9,7 +9,7 @@ export interface TransferEnvelope {
     userParaId: KeyringPair,
     amount: number
 }
-// A facade for the bridges
+/** A facade for the bridges */ 
 export class Bridge {
     ethToken: IJurToken;
     ethBridge: IBridgeContract;

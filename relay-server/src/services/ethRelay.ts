@@ -30,11 +30,24 @@ interface IContract {
 
 export interface IJurToken extends IContract {
   ownerPublic: string;
+  /** Transfer some JUR funds to a wallet on ethereum
+   * @param {string} to - The eth wallet to transfer funds to
+   * @param {number} amount - The amount of eth funds to transfer to wallet, must be non-negative
+   * @returns {Promise<Result<Unit, Error>>} Empty {@link Result} if successful otherwise {@link Error}
+   */
   transferJUR(to: string, amount: number) : Promise<Result<Unit, Error>>
 }
 
 export interface IBridgeContract extends IContract {
   tokenContract: IJurToken;
+
+  /** 
+   * Locks funds in a bridge contract
+   * @param {string} source - The account with funds you wish to transfer
+   * @param {string} sourceKey - The account's private keys to sign the transaction
+   * @param {number} amount - The amount of JUR tokens you want to send to substrate, must be non-negative
+   * @returns {Promise<Result<Unit, Error>>} Empty {@link Result} if successful otherwise {@link Error}
+   *  */
   lockFunds(source: string, sourceKey: string, amount: number): Promise<Result<Unit, Error>>
 }
 
@@ -54,11 +67,6 @@ export class TokenContract implements IJurToken {
         this.ownerPublic = ownerPublic;
     }
 
-    /** Transfer some JUR funds to a wallet on ethereum
-     * @param {string} to - The eth wallet to transfer funds to
-     * @param {number} amount - The amount of eth funds to transfer to wallet, must be non-negative
-     * @returns {Promise<Result<Unit, Error>>} Empty {@link Result} if successful otherwise {@link Error}
-     */
     async transferJUR(to: string, amount: number) : Promise<Result<Unit, Error>> {
         if (amount <= 0) {
           return Result.err(invalidAmountError);
@@ -112,13 +120,6 @@ export class BridgeContract implements IBridgeContract {
         this.ownerKey = ownerKey;
     }
 
-    /** 
-     * Locks funds in a bridge contract
-     * @param {string} source - The account with funds you wish to transfer
-     * @param {string} sourceKey - The account's private keys to sign the transaction
-     * @param {number} amount - The amount of JUR tokens you want to send to substrate, must be non-negative
-     * @returns {Promise<Result<Unit, Error>>} Empty {@link Result} if successful otherwise {@link Error}
-     *  */
     async lockFunds(source: string, sourceKey: string, amount: number) : Promise<Result<Unit, Error>> {
       if (amount <= 0) {
         return Result.err(invalidAmountError);
