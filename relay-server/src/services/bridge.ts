@@ -1,7 +1,7 @@
 import { IJurToken, IBridgeContract } from "./ethRelay"
 import { ISubstrateBridge } from "./parachainRelay";
 import { KeyringPair } from '@polkadot/keyring/types';
-import { Result, Unit } from "true-myth";
+import { Ok, Err, Result, None } from "ts-results";
 
 export interface TransferEnvelope {
     userPublic: string,
@@ -9,7 +9,7 @@ export interface TransferEnvelope {
     userParaId: KeyringPair,
     amount: number
 }
-/** A facade for the bridges */ 
+/** A facade for the bridges */
 export class Bridge {
     ethToken: IJurToken;
     ethBridge: IBridgeContract;
@@ -21,7 +21,7 @@ export class Bridge {
         this.substrateBridge = substrateBridge;
     }
 
-    async transferFunds(envelope: TransferEnvelope) : Promise<Result<Unit, Error>> {
+    async transferFunds(envelope: TransferEnvelope) : Promise<Result<None, Error>> {
         return await this.ethBridge.lockFunds(envelope.userPublic, envelope.userPrivate, envelope.amount);
     }
 

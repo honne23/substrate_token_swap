@@ -34,24 +34,24 @@ const port = 8080; // default port to listen
 app.post("/register", async (req, res) => {
     const data = req.body;
     const userRegisterResult = await database.registerUser(data.eth, data.uri);
-    if (userRegisterResult.isOk) {
+    if (userRegisterResult.ok) {
         res.sendStatus(201);
     } else {
         res.sendStatus(409); // Conflict, already exists
     }
-    
+
 })
 
 // Server-side secure
 app.post("/add-funds", async (req, res) => {
     const data = req.body;
     const transferResult = await tokenContract.transferJUR(data.eth, data.amount);
-    if (transferResult.isOk) {
+    if (transferResult.ok) {
         res.sendStatus(200);
     } else {
         res.sendStatus(500);
     }
-    
+
 })
 
 // ONLY EVER CALL THIS ON CLIENT-SIDE!
@@ -59,9 +59,9 @@ app.post("/add-funds", async (req, res) => {
 app.post("/transfer", async (req, res) => {
     const data = req.body;
     const paraId = database.getUser(data.eth)
-    if (paraId.isOk) {
+    if (paraId.ok) {
         await bridgeRelay.transferFunds({
-            userParaId: paraId.value,
+            userParaId: paraId.val,
             userPublic: data.eth,
             userPrivate: data.ethPriv,
             amount: data.amount
@@ -70,7 +70,7 @@ app.post("/transfer", async (req, res) => {
     } else {
         res.sendStatus(404);
     }
-    
+
 })
 
 // start the Express server

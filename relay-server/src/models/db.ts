@@ -1,7 +1,7 @@
 import { KeyringPair } from '@polkadot/keyring/types';
 import { Keyring  } from '@polkadot/api';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
-import { Result, Unit } from 'true-myth';
+import { Ok, Err, Result, None } from "ts-results";
 
 const userExistsError = new Error("user already exists");
 const userDoesntExistError = new Error("user does not exist");
@@ -12,9 +12,9 @@ export interface IDatabase {
      * A function to register a mapping of an ETH wallet to a substrate wallet.
      * @param {string} ethAddress - The ETH address to register in the databse
      * @param {string} keyUri - The URI to generate the substrate keypair
-     * @returns {Promise<Result<Unit, Error>>} Empty {@link Result} if successful otherwise {@link Error}
+     * @returns {Promise<Result<None, Error>>} Empty {@link Result} if successful otherwise {@link Error}
      */
-    registerUser(ethAddress: string, keyUri: string): Promise<Result<Unit, Error>>;
+    registerUser(ethAddress: string, keyUri: string): Promise<Result<None, Error>>;
 
     /**
      * A function used to get an existing user, throws an error if the user doesn't already exist.
@@ -31,23 +31,23 @@ export class MemoryDatabase implements IDatabase {
         this.userMap = new Map<string, KeyringPair>();
     }
 
-    async registerUser(ethAddress: string, keyUri: string): Promise<Result<Unit, Error>>{
+    async registerUser(ethAddress: string, keyUri: string): Promise<Result<None, Error>>{
         await cryptoWaitReady();
         const keyring = new Keyring({ type: 'sr25519' });
         const pair = keyring.createFromUri(keyUri);
         if (this.userMap.has(ethAddress)) {
-            return Result.err(userExistsError)
+            return Err(userExistsError)
         } else {
             this.userMap.set(ethAddress, pair);
-            return Result.ok(Unit)
+            return Ok(None)
         }
     }
 
     getUser(ethAddress: string): Result<KeyringPair, Error> {
         if (this.userMap.has(ethAddress)) {
-            return Result.ok(this.userMap.get(ethAddress)!);
+            return Ok(this.userMap.get(ethAddress)!);
         } else {
-            return Result.err(userDoesntExistError);
+            return Err(userDoesntExistError);
         }
     }
 }

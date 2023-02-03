@@ -5,7 +5,7 @@ import { cryptoWaitReady } from '@polkadot/util-crypto';
 import {BN} from "bn.js";
 
 import * as JURSubstrate from "../config/metadata.json";
-import { Result, Unit } from 'true-myth';
+import { Ok, Err, Result, None } from "ts-results";
 import { Logger } from 'tslog';
 import { getTrace, invalidAmountError } from '../utils/utils';
 
@@ -26,9 +26,9 @@ export interface ISubstrateBridge extends ISubstrateContract {
      * @param {string} from - ETH wallet of incoming funds
      * @param {KeyringPair} to - Substrate keyring to transfer funds to
      * @param {number} value - Non negative amount to transfer
-     * @returns {Promise<Result<Unit, Error>>} Empty {@link Result} if successful otherwise {@link Error}
+     * @returns {Promise<Result<None, Error>>} Empty {@link Result} if successful otherwise {@link Error}
      */
-    mintSubstrate(from: string, to: KeyringPair, value: number): Promise<Result<Unit, Error>>
+    mintSubstrate(from: string, to: KeyringPair, value: number): Promise<Result<None, Error>>
 }
 
 
@@ -37,7 +37,7 @@ export class ParachainBridge implements ISubstrateBridge {
     ownerPair: () => Promise<KeyringPair>;
     contract: (api: ApiPromise) => ContractPromise;
     provider: WsProvider;
-    
+
 
     constructor(uri: string, provider: WsProvider, contractAddress: string) {
         this.ownerPair = async () => {
@@ -51,10 +51,10 @@ export class ParachainBridge implements ISubstrateBridge {
     }
 
 
-    
-    async mintSubstrate(from: string, to: KeyringPair, value: number): Promise<Result<Unit, Error>> {
+
+    async mintSubstrate(from: string, to: KeyringPair, value: number): Promise<Result<None, Error>> {
         if (value <= 0) {
-            return Result.err(invalidAmountError);
+            return Err(invalidAmountError);
         }
         log.info("Connecting to substrate endpoint");
         const api = await ApiPromise.create({ provider: this.provider, noInitWarn: true });
@@ -95,16 +95,16 @@ export class ParachainBridge implements ISubstrateBridge {
                         }
                     });
                 log.info("Transfer to substrate successful");
-                return Result.ok(Unit)
+                return Ok(None)
               } catch(error) {
                 log.error(getTrace(error));
-                return Result.err(transactionFailedError);
+                return Err(transactionFailedError);
               }
-              
+
         } catch(error) {
             log.error(getTrace(error));
-            return Result.err(queryFailedError);
+            return Err(queryFailedError);
         }
-        
+
       }
 }

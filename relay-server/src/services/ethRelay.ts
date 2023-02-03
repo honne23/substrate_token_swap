@@ -2,7 +2,7 @@ import { KeyringPair } from "@polkadot/keyring/types";
 import Web3 from "web3";
 import { Contract } from "web3-eth-contract"
 import { AbiItem } from "web3-utils";
-import { Result, Unit } from 'true-myth';
+import { Ok, Err, Result, None } from "ts-results";
 import { Logger } from "tslog";
 
 
@@ -33,22 +33,22 @@ export interface IJurToken extends IContract {
   /** Transfer some JUR funds to a wallet on ethereum
    * @param {string} to - The eth wallet to transfer funds to
    * @param {number} amount - The amount of eth funds to transfer to wallet, must be non-negative
-   * @returns {Promise<Result<Unit, Error>>} Empty {@link Result} if successful otherwise {@link Error}
+   * @returns {Promise<Result<None, Error>>} Empty {@link Result} if successful otherwise {@link Error}
    */
-  transferJUR(to: string, amount: number) : Promise<Result<Unit, Error>>
+  transferJUR(to: string, amount: number) : Promise<Result<None, Error>>
 }
 
 export interface IBridgeContract extends IContract {
   tokenContract: IJurToken;
 
-  /** 
+  /**
    * Locks funds in a bridge contract
    * @param {string} source - The account with funds you wish to transfer
    * @param {string} sourceKey - The account's private keys to sign the transaction
    * @param {number} amount - The amount of JUR tokens you want to send to substrate, must be non-negative
-   * @returns {Promise<Result<Unit, Error>>} Empty {@link Result} if successful otherwise {@link Error}
-   *  */
-  lockFunds(source: string, sourceKey: string, amount: number): Promise<Result<Unit, Error>>
+   * @returns {Promise<Result<None, Error>>} Empty {@link Result} if successful otherwise {@link Error}
+   */
+  lockFunds(source: string, sourceKey: string, amount: number): Promise<Result<None, Error>>
 }
 
 export class TokenContract implements IJurToken {
@@ -67,9 +67,9 @@ export class TokenContract implements IJurToken {
         this.ownerPublic = ownerPublic;
     }
 
-    async transferJUR(to: string, amount: number) : Promise<Result<Unit, Error>> {
+    async transferJUR(to: string, amount: number) : Promise<Result<None, Error>> {
         if (amount <= 0) {
-          return Result.err(invalidAmountError);
+          return Err(invalidAmountError);
         }
         // Construct transaction
         const transferData = this.contractMetadata.contract.methods.transfer(to, `${amount}`).encodeABI();
@@ -90,16 +90,16 @@ export class TokenContract implements IJurToken {
             };
             const signedTransaction = await this.web3.eth.accounts.signTransaction(rawTransaction, this.ownerKey);
             await this.web3.eth.sendSignedTransaction(signedTransaction.rawTransaction!);
-            return Result.ok(Unit)
+            return Ok(None)
           } catch(error) {
             log.error(getTrace(error));
-            return Result.err(txRejectedError);
+            return Err(txRejectedError);
           }
         } catch(error) {
           log.error(getTrace(error));
-          return Result.err(txQueryError);
+          return Err(txQueryError);
         }
-        
+
       }
 }
 
@@ -120,9 +120,9 @@ export class BridgeContract implements IBridgeContract {
         this.ownerKey = ownerKey;
     }
 
-    async lockFunds(source: string, sourceKey: string, amount: number) : Promise<Result<Unit, Error>> {
+    async lockFunds(source: string, sourceKey: string, amount: number) : Promise<Result<None, Error>> {
       if (amount <= 0) {
-        return Result.err(invalidAmountError);
+        return Err(invalidAmountError);
       }
       try {
         log.info("Setting approval on token contract")
@@ -156,23 +156,23 @@ export class BridgeContract implements IBridgeContract {
           };
           const signedTransaction = await this.web3.eth.accounts.signTransaction(rawTransaction, sourceKey);
           await this.web3.eth.sendSignedTransaction(signedTransaction.rawTransaction!);
-          return Result.ok(Unit)
+          return Ok(None)
 
         } catch(error) {
           log.error(getTrace(error));
-          return Result.err(bridgeLockError);
+          return Err(bridgeLockError);
         }
 
       } catch(error) {
         log.error(getTrace(error));
-        return Result.err(bridgeApprovalRejectedError);
+        return Err(bridgeApprovalRejectedError);
       }
     }
       /** A hook listening for events emitted by the lock that mints tokens on the substrate contract
-       * @param {(from: string, to: KeyringPair, value: number) => Promise<Result<Unit, Error>>} hook - A callback to transfer the funds on successful lock
+       * @param {(from: string, to: KeyringPair, value: number) => Promise<Result<None, Error>>} hook - A callback to transfer the funds on successful lock
        * @param {(ethAddress: string) => Result<KeyringPair, Error>} destinationGetter - A callback to get the mapped substrate keychain for the given ethAddress
        */
-      attachTransferHook(hook: (from: string, to: KeyringPair, value: number) => Promise<Result<Unit, Error>>, destinationGetter: (ethAddress: string) => Result<KeyringPair, Error>) {
+      attachTransferHook(hook: (from: string, to: KeyringPair, value: number) => Promise<Result<None, Error>>, destinationGetter: (ethAddress: string) => Result<KeyringPair, Error>) {
         this.contractMetadata.contract.events.SwapInitiated({}, async (error: any, event: any) => {
             if(error) {
               log.error(error)
@@ -180,12 +180,12 @@ export class BridgeContract implements IBridgeContract {
             }
             log.info("Transferring funds to substrate")
             const userKeypair = destinationGetter(event.returnValues.from);
-            if (userKeypair.isErr) {
-              log.error(userKeypair.error.message)
-            } else if (userKeypair.isOk) {
-              const transferResult = await hook(event.returnValues.from, userKeypair.value, event.returnValues.value);
-              if (transferResult.isErr) {
-                log.error(transferResult.error.message);
+            if (userKeypair.err) {
+              log.error(userKeypair.val.message)
+            } else if (userKeypair.ok) {
+              const transferResult = await hook(event.returnValues.from, userKeypair.val, event.returnValues.value);
+              if (transferResult.err) {
+                log.error(transferResult.val.message);
               }
             }
           });
