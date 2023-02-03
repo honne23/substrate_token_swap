@@ -21,6 +21,13 @@ interface ISubstrateContract {
 }
 
 export interface ISubstrateBridge extends ISubstrateContract {
+    /**
+     * A function that mints tokens on the substrate parachain of equivalent amount to those emitted in the ETH event
+     * @param {string} from - ETH wallet of incoming funds
+     * @param {KeyringPair} to - Substrate keyring to transfer funds to
+     * @param {number} value - Non negative amount to transfer
+     * @returns {Promise<Result<Unit, Error>>} Empty {@link Result} if successful otherwise {@link Error}
+     */
     mintSubstrate(from: string, to: KeyringPair, value: number): Promise<Result<Unit, Error>>
 }
 
@@ -44,17 +51,12 @@ export class ParachainBridge implements ISubstrateBridge {
     }
 
 
-    /**
-     * A function that mints tokens on the substrate parachain of equivalent amount to those emitted in the ETH event
-     * @param {string} from - ETH wallet of incoming funds
-     * @param {KeyringPair} to - Substrate keyring to transfer funds to
-     * @param {number} value - Non negative amount to transfer
-     * @returns {Promise<Result<Unit, Error>>} Empty {@link Result} if successful otherwise {@link Error}
-     */
+    
     async mintSubstrate(from: string, to: KeyringPair, value: number): Promise<Result<Unit, Error>> {
         if (value <= 0) {
             return Result.err(invalidAmountError);
         }
+        log.info("Connecting to substrate endpoint");
         const api = await ApiPromise.create({ provider: this.provider, noInitWarn: true });
 
         // Workaround from https://github.com/polkadot-js/api/issues/5255
@@ -65,6 +67,7 @@ export class ParachainBridge implements ISubstrateBridge {
 
         const queryOptions = { storageDepositLimit: null , gasLimit }
         try {
+            log.info("Querying substrate contract for refTime and proofSize");
             const { gasRequired, storageDeposit, result } = await this.contract(api).query.mintBridge(
                 (await this.ownerPair()).address,
                 queryOptions,
@@ -78,6 +81,7 @@ export class ParachainBridge implements ISubstrateBridge {
               });
               const txOptions = { storageDepositLimit: null, gasLimit }
               try {
+                log.info("Executing transfer to substrate");
                 await this.contract(api).tx.mintBridge(
                     txOptions,
                     from,
@@ -90,6 +94,7 @@ export class ParachainBridge implements ISubstrateBridge {
                         console.log('finalized');
                         }
                     });
+                log.info("Transfer to substrate successful");
                 return Result.ok(Unit)
               } catch(error) {
                 log.error(getTrace(error));
