@@ -4,7 +4,7 @@ import { Keyring, WsProvider,  } from '@polkadot/api';
 import * as dotenv from 'dotenv';
 import { BridgeContract, TokenContract } from "./services/ethRelay";
 import { ParachainBridge } from "./services/parachainRelay";
-import { Database } from "./models/db";
+import { MemoryDatabase } from "./models/db";
 import { Bridge } from "./services/bridge";
 import { KeyringPair } from "@polkadot/keyring/types";
 
@@ -17,7 +17,7 @@ const bridgeContract = new BridgeContract(process.env.ETH_BRIDGE_CONTRACT_ADDRES
 const wsProvider = new WsProvider(process.env.PARACHAIN_HOST!);
 const parachainBridge = new ParachainBridge(process.env.PARACHAIN_KEY_URI!, wsProvider, process.env.PARACHAIN_ADDRESS!);
 
-const database = new Database()
+const database = new MemoryDatabase()
 
 // Attach transferhook
 bridgeContract.attachTransferHook((from: string, to: KeyringPair, value: number) => parachainBridge.mintSubstrate(from,to,value),(ethAddress: string) => database.getUser(ethAddress));
@@ -33,15 +33,25 @@ const port = 8080; // default port to listen
 // Server-side secure
 app.post("/register", async (req, res) => {
     const data = req.body;
-    await database.registerUser(data.eth, data.uri);
-    res.sendStatus(201);
+    const userRegisterResult = await database.registerUser(data.eth, data.uri);
+    if (userRegisterResult.isOk) {
+        res.sendStatus(201);
+    } else {
+        res.sendStatus(409); // Conflict, already exists
+    }
+    
 })
 
 // Server-side secure
 app.post("/add-funds", async (req, res) => {
     const data = req.body;
-    await tokenContract.transferJUR(data.eth, data.amount);
-    res.sendStatus(200);
+    const transferResult = await tokenContract.transferJUR(data.eth, data.amount);
+    if (transferResult.isOk) {
+        res.sendStatus(200);
+    } else {
+        res.sendStatus(500);
+    }
+    
 })
 
 // ONLY EVER CALL THIS ON CLIENT-SIDE!
@@ -49,13 +59,18 @@ app.post("/add-funds", async (req, res) => {
 app.post("/transfer", async (req, res) => {
     const data = req.body;
     const paraId = database.getUser(data.eth)
-    await bridgeRelay.transferFunds({
-        userParaId: paraId,
-        userPublic: data.eth,
-        userPrivate: data.ethPriv,
-        amount: data.amount
-    })
-    res.sendStatus(200);
+    if (paraId.isOk) {
+        await bridgeRelay.transferFunds({
+            userParaId: paraId.value,
+            userPublic: data.eth,
+            userPrivate: data.ethPriv,
+            amount: data.amount
+        })
+        res.sendStatus(200);
+    } else {
+        res.sendStatus(404);
+    }
+    
 })
 
 // start the Express server

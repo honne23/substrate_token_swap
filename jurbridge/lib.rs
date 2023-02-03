@@ -86,7 +86,7 @@ mod jurbridge {
 
         /// Mints tokens sent from bridge
         #[ink(message)]
-        pub fn mint_bridge(&mut self,from: Vec<u8>, to: AccountId, value: Balance) -> Result<()>  {
+        pub fn mint_bridge(&mut self, from: Vec<u8>, to: AccountId, value: Balance) -> Result<()>  {
             self.total_supply += value;
             if !self.bridge_accounts.contains(&from) {
                 self.bridge_accounts.insert(from.clone(), &to);
@@ -96,7 +96,7 @@ mod jurbridge {
             Self::env().emit_event(SwapFinalised {
                 from: Some(from),
                 to: Some(to),
-                value: value
+                value
             });
             Ok(())
         }
