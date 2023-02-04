@@ -50,6 +50,8 @@ function expectOk<T,E>(result: Result<T,E>, message: string) {
 
 describe("ETH to Substrate test", () => {
     it("tests that funds have been successfully transferred from eth to substrate", async () => {
+
+        // Initialise environment
         const [db, tokenContract, bridgeContract, parachainBridge, bridgeRelay] = getProviders();
 
         (await db.registerUser(testPublic, "//Alice")).unwrap();
@@ -57,16 +59,17 @@ describe("ETH to Substrate test", () => {
 
         // Get current balances
         const tokenBalance = (await tokenContract.getBalance(tokenContract.ownerPublic)).unwrap();
-        const bridgeBalance = (await bridgeContract.getBalance(bridgeContract.contractMetadata.address)).unwrap()
+        const bridgeBalance = (await bridgeContract.getBalance(testPublic)).unwrap()
         const parachainBalance = (await parachainBridge.getBalance(paraId, (await parachainBridge.ownerPair()))).unwrap()
 
-
+        // Test amount to transfer
         const transferAmount = 100;
-        const initFundsResult = (await tokenContract.transferJUR(testPublic, transferAmount)).unwrap();
-        
-    
-    
-        const transferResult = (await bridgeRelay.transferFunds({
+
+        // Transfer to Tokens to test address from original contract
+        (await tokenContract.transferJUR(testPublic, transferAmount)).unwrap();
+
+        // Transfer funds from test address into bridge address
+        (await bridgeRelay.transferFunds({
             userPublic: testPublic,
             userPrivate: testPrivate,
             userParaId: paraId,
@@ -74,14 +77,16 @@ describe("ETH to Substrate test", () => {
         })).unwrap();
 
 
-
+        // Mint equivalent funds on the parachain address
         (await parachainBridge.mintSubstrate(testPublic, paraId, transferAmount)).unwrap()
         
 
+        // Get post transfer balances
         const postTokenBalance = (await tokenContract.getBalance(tokenContract.ownerPublic)).unwrap();
-        const postBridgeBalance = (await bridgeContract.getBalance(bridgeContract.contractMetadata.address)).unwrap();
+        const postBridgeBalance = (await bridgeContract.getBalance(testPublic)).unwrap();
         const postParachainBalance = (await parachainBridge.getBalance(paraId, (await parachainBridge.ownerPair()))).unwrap();
 
+        // Check balances on all chains and wallets match expectations
         expect(tokenBalance - transferAmount).to.be.eq(postTokenBalance);
         expect(bridgeBalance + transferAmount).to.be.eq(postBridgeBalance);
         expect(parachainBalance + transferAmount).to.be.eq(postParachainBalance);

@@ -161,30 +161,28 @@ export class BridgeContract extends BalanceContract {
       }
     }
 
-    async getBalance(target: string): Promise<Result<number, Error>> {
-      const balance = await this.tokenContract.contractMetadata.contract.methods.balanceOf(target).call()
-      return Ok(+balance);
+
+
+    /** A hook listening for events emitted by the lock that mints tokens on the substrate contract
+     * @param {(from: string, to: KeyringPair, value: number) => Promise<Result<None, Error>>} hook - A callback to transfer the funds on successful lock
+     * @param {(ethAddress: string) => Result<KeyringPair, Error>} destinationGetter - A callback to get the mapped substrate keychain for the given ethAddress
+     */
+    attachTransferHook(hook: (from: string, to: KeyringPair, value: number) => Promise<Result<None, Error>>, destinationGetter: (ethAddress: string) => Result<KeyringPair, Error>) {
+      this.contractMetadata.contract.events.SwapInitiated({}, async (error: any, event: any) => {
+          if(error) {
+            log.error(error)
+            return;
+          }
+          log.info("Transferring funds to substrate")
+          const userKeypair = destinationGetter(event.returnValues.from);
+          if (userKeypair.err) {
+            log.error(userKeypair.val.message)
+          } else if (userKeypair.ok) {
+            const transferResult = await hook(event.returnValues.from, userKeypair.val, event.returnValues.value);
+            if (transferResult.err) {
+              log.error(transferResult.val.message);
+            }
+          }
+        });
     }
-      /** A hook listening for events emitted by the lock that mints tokens on the substrate contract
-       * @param {(from: string, to: KeyringPair, value: number) => Promise<Result<None, Error>>} hook - A callback to transfer the funds on successful lock
-       * @param {(ethAddress: string) => Result<KeyringPair, Error>} destinationGetter - A callback to get the mapped substrate keychain for the given ethAddress
-       */
-      attachTransferHook(hook: (from: string, to: KeyringPair, value: number) => Promise<Result<None, Error>>, destinationGetter: (ethAddress: string) => Result<KeyringPair, Error>) {
-        this.contractMetadata.contract.events.SwapInitiated({}, async (error: any, event: any) => {
-            if(error) {
-              log.error(error)
-              return;
-            }
-            log.info("Transferring funds to substrate")
-            const userKeypair = destinationGetter(event.returnValues.from);
-            if (userKeypair.err) {
-              log.error(userKeypair.val.message)
-            } else if (userKeypair.ok) {
-              const transferResult = await hook(event.returnValues.from, userKeypair.val, event.returnValues.value);
-              if (transferResult.err) {
-                log.error(transferResult.val.message);
-              }
-            }
-          });
-      }
 }
