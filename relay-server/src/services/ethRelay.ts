@@ -1,7 +1,7 @@
 import { KeyringPair } from "@polkadot/keyring/types";
 import Web3 from "web3";
 import { Contract } from "web3-eth-contract"
-import { AbiItem } from "web3-utils";
+import { AbiItem, numberToHex } from "web3-utils";
 import { Ok, Err, Result, None } from "ts-results";
 import { Logger } from "tslog";
 
@@ -22,43 +22,15 @@ const txRejectedError = new Error("evm rejected the submitted transaction");
 const bridgeApprovalRejectedError = new Error("the token contract rejected the bridge contract approval request");
 const bridgeLockError = new Error("funds could be transfered into the bridge to be locked");
 
-interface IContract {
-  ownerKey: string;
-  contractMetadata: {contract: Contract, address: string};
-  web3: Web3
-}
 
-export interface IJurToken extends IContract {
-  ownerPublic: string;
-  /** Transfer some JUR funds to a wallet on ethereum
-   * @param {string} to - The eth wallet to transfer funds to
-   * @param {number} amount - The amount of eth funds to transfer to wallet, must be non-negative
-   * @returns {Promise<Result<None, Error>>} Empty {@link Result} if successful otherwise {@link Error}
-   */
-  transferJUR(to: string, amount: number) : Promise<Result<None, Error>>
-}
-
-export interface IBridgeContract extends IContract {
-  tokenContract: IJurToken;
-
-  /**
-   * Locks funds in a bridge contract
-   * @param {string} source - The account with funds you wish to transfer
-   * @param {string} sourceKey - The account's private keys to sign the transaction
-   * @param {number} amount - The amount of JUR tokens you want to send to substrate, must be non-negative
-   * @returns {Promise<Result<None, Error>>} Empty {@link Result} if successful otherwise {@link Error}
-   */
-  lockFunds(source: string, sourceKey: string, amount: number): Promise<Result<None, Error>>
-}
-
-export class TokenContract implements IJurToken {
-    ownerKey: string;
+abstract class BalanceContract {
     ownerPublic: string;
     contractMetadata: {contract: Contract, address: string};
-    web3: Web3
+    ownerKey: string;
+    web3: Web3;
 
     constructor(contractAddress:string, ownerKey: string, ownerPublic: string, host: string) {
-        this.web3  = new Web3(Web3.givenProvider || host);
+      this.web3  = new Web3(Web3.givenProvider || host);
         this.contractMetadata = {
             contract: new this.web3.eth.Contract(tokenAbi as unknown as AbiItem, contractAddress),
             address: contractAddress
@@ -66,7 +38,28 @@ export class TokenContract implements IJurToken {
         this.ownerKey = ownerKey;
         this.ownerPublic = ownerPublic;
     }
+  
 
+  /**
+   * 
+   * @param {string} caller -  The account that is calling the function
+   * @param {string} target -  The account with the balances you want to query
+   * @returns {Promise<Result<number, Error>>} Balance of wallet if successful otherwise {@link Error}
+   */
+  async getBalance(target: string): Promise<Result<number, Error>> {
+    const balance = await this.contractMetadata.contract.methods.balanceOf(target).call()
+    return Ok(+balance);
+  }
+}
+
+
+export class TokenContract extends BalanceContract  {
+
+    /** Transfer some JUR funds to a wallet on ethereum
+   * @param {string} to - The eth wallet to transfer funds to
+   * @param {number} amount - The amount of eth funds to transfer to wallet, must be non-negative
+   * @returns {Promise<Result<None, Error>>} Empty {@link Result} if successful otherwise {@link Error}
+   */
     async transferJUR(to: string, amount: number) : Promise<Result<None, Error>> {
         if (amount <= 0) {
           return Err(invalidAmountError);
@@ -103,23 +96,22 @@ export class TokenContract implements IJurToken {
       }
 }
 
-export class BridgeContract implements IBridgeContract {
-    tokenContract: IJurToken;
-    contractMetadata: {contract: Contract, address: string};
-    ownerKey: string;
-    web3: Web3;
+export class BridgeContract extends BalanceContract {
+    tokenContract: TokenContract;
 
 
-    constructor(contractAddress:string, ownerKey: string, tokenContract: IJurToken, host: string) {
-        this.web3  = new Web3(Web3.givenProvider || host);
+    constructor(contractAddress:string, ownerKey: string, ownerPublic: string, host: string,  tokenContract: TokenContract) {
+        super(contractAddress, ownerKey, ownerPublic, host);
         this.tokenContract = tokenContract;
-        this.contractMetadata = {
-            contract: new this.web3.eth.Contract(bridgeAbi as unknown as AbiItem, contractAddress),
-            address: contractAddress
-        };
-        this.ownerKey = ownerKey;
     }
 
+    /**
+     * Locks funds in a bridge contract
+     * @param {string} source - The account with funds you wish to transfer
+     * @param {string} sourceKey - The account's private keys to sign the transaction
+     * @param {number} amount - The amount of JUR tokens you want to send to substrate, must be non-negative
+     * @returns {Promise<Result<None, Error>>} Empty {@link Result} if successful otherwise {@link Error}
+     */
     async lockFunds(source: string, sourceKey: string, amount: number) : Promise<Result<None, Error>> {
       if (amount <= 0) {
         return Err(invalidAmountError);
@@ -167,6 +159,11 @@ export class BridgeContract implements IBridgeContract {
         log.error(getTrace(error));
         return Err(bridgeApprovalRejectedError);
       }
+    }
+
+    async getBalance(target: string): Promise<Result<number, Error>> {
+      const balance = await this.tokenContract.contractMetadata.contract.methods.balanceOf(target).call()
+      return Ok(+balance);
     }
       /** A hook listening for events emitted by the lock that mints tokens on the substrate contract
        * @param {(from: string, to: KeyringPair, value: number) => Promise<Result<None, Error>>} hook - A callback to transfer the funds on successful lock

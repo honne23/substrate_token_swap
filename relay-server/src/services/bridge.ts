@@ -1,4 +1,4 @@
-import { IJurToken, IBridgeContract } from "./ethRelay"
+import { TokenContract, BridgeContract } from "./ethRelay"
 import { ISubstrateBridge } from "./parachainRelay";
 import { KeyringPair } from '@polkadot/keyring/types';
 import { Ok, Err, Result, None } from "ts-results";
@@ -11,11 +11,11 @@ export interface TransferEnvelope {
 }
 /** A facade for the bridges */
 export class Bridge {
-    ethToken: IJurToken;
-    ethBridge: IBridgeContract;
+    ethToken: TokenContract;
+    ethBridge: BridgeContract;
     substrateBridge: ISubstrateBridge;
 
-    constructor(ethToken: IJurToken, ethBridge: IBridgeContract, substrateBridge: ISubstrateBridge) {
+    constructor(ethToken: TokenContract, ethBridge: BridgeContract, substrateBridge: ISubstrateBridge) {
         this.ethToken = ethToken;
         this.ethBridge = ethBridge;
         this.substrateBridge = substrateBridge;

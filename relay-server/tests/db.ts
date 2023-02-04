@@ -15,7 +15,7 @@ describe('User register test', () => {
 
 
 
-describe('User exists test', () => {
+describe('User already exists test', () => {
     it('tests registration should fail if user already exists', async () => {
         const db = new MemoryDatabase();
         const registerResult = await db.registerUser("0x1", "//Alice");

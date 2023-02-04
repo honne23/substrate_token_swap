@@ -1,6 +1,6 @@
 import express from "express";
 import bodyParser from "body-parser";
-import { Keyring, WsProvider,  } from '@polkadot/api';
+import { WsProvider,  } from '@polkadot/api';
 import * as dotenv from 'dotenv';
 import { BridgeContract, TokenContract } from "./services/ethRelay";
 import { ParachainBridge } from "./services/parachainRelay";
@@ -10,8 +10,20 @@ import { KeyringPair } from "@polkadot/keyring/types";
 
 dotenv.config();
 
-const tokenContract = new TokenContract(process.env.ETH_TOKEN_CONTRACT_ADDRESS!, process.env.ETH_OWNER_PRIVATE_KEY!, process.env.ETH_CONTRACT_OWNER!, process.env.ETH_HOST!)
-const bridgeContract = new BridgeContract(process.env.ETH_BRIDGE_CONTRACT_ADDRESS!, process.env.ETH_OWNER_PRIVATE_KEY!, tokenContract, process.env.ETH_HOST!)
+const tokenContract = new TokenContract(
+    process.env.ETH_TOKEN_CONTRACT_ADDRESS!, 
+    process.env.ETH_OWNER_PRIVATE_KEY!, 
+    process.env.ETH_OWNER_PUBLIC_KEY!, 
+    process.env.ETH_HOST!
+    );
+
+const bridgeContract = new BridgeContract(
+    process.env.ETH_BRIDGE_CONTRACT_ADDRESS!, 
+    process.env.ETH_OWNER_PRIVATE_KEY!, 
+    process.env.ETH_OWNER_PUBLIC_KEY!,  
+    process.env.ETH_HOST!, 
+    tokenContract
+    );
 
 // Setup substrate
 const wsProvider = new WsProvider(process.env.PARACHAIN_HOST!);

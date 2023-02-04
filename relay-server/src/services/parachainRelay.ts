@@ -2,17 +2,21 @@ import { ApiPromise, Keyring, WsProvider} from '@polkadot/api';
 import { KeyringPair } from '@polkadot/keyring/types';
 import { ContractPromise } from '@polkadot/api-contract';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
+import { SimpleChannel } from "channel-ts";
 import {BN} from "bn.js";
 
 import * as JURSubstrate from "../config/metadata.json";
-import { Ok, Err, Result, None } from "ts-results";
+import { Ok, Err, Result, None, Option } from "ts-results";
 import { Logger } from 'tslog';
 import { getTrace, invalidAmountError } from '../utils/utils';
+import { ISubmittableResult } from '@polkadot/types/types';
+import { bytesToHex, hexToNumber } from 'web3-utils';
 
 const log = new Logger();
 
 const queryFailedError = new Error("could not query substrate");
 const transactionFailedError = new Error("submitting substrate transaction failed");
+const getBalanceFailedError = new Error("could not query balance on wallet")
 
 interface ISubstrateContract {
     ownerPair: () => Promise<KeyringPair>,
@@ -29,6 +33,14 @@ export interface ISubstrateBridge extends ISubstrateContract {
      * @returns {Promise<Result<None, Error>>} Empty {@link Result} if successful otherwise {@link Error}
      */
     mintSubstrate(from: string, to: KeyringPair, value: number): Promise<Result<None, Error>>
+
+    /**
+     * 
+     * @param {KeyringPair} wallet - The {@link KeyringPair} to inspect balance
+     * @param {KeyringPair} caller - The function caller
+     * @returns {Promise<Result<number, Error>>} Balance of wallet if successful otherwise {@link Error}
+     */
+    getBalance(caller: KeyringPair, wallet: KeyringPair): Promise<Result<number, Error>>
 }
 
 
@@ -82,20 +94,25 @@ export class ParachainBridge implements ISubstrateBridge {
               const txOptions = { storageDepositLimit: null, gasLimit }
               try {
                 log.info("Executing transfer to substrate");
-                await this.contract(api).tx.mintBridge(
+                const chan = new SimpleChannel<boolean>();
+                this.contract(api).tx.mintBridge(
                     txOptions,
                     from,
                     to.address,
-                    value).signAndSend(to, (txResult:any) => {
-                        console.log(txResult.toHuman());
+                    value).signAndSend(to, (txResult:ISubmittableResult) => {
+                        if (txResult.isError) {
+                            chan.send(false);
+                        }
                         if (txResult.status.isInBlock) {
-                        console.log('in a block');
-                        } else if (txResult.status.isFinalized) {
-                        console.log('finalized');
+                            chan.send(true);
                         }
                     });
-                log.info("Transfer to substrate successful");
-                return Ok(None)
+                const txResult = await chan.receive();
+                if (txResult) {
+                    return Ok(None);
+                } else {
+                    return Err(transactionFailedError);
+                }
               } catch(error) {
                 log.error(getTrace(error));
                 return Err(transactionFailedError);
@@ -105,6 +122,28 @@ export class ParachainBridge implements ISubstrateBridge {
             log.error(getTrace(error));
             return Err(queryFailedError);
         }
-
       }
+
+    async getBalance(caller: KeyringPair, wallet: KeyringPair): Promise<Result<number, Error>> {
+        try {
+            const api = await ApiPromise.create({ provider: this.provider, noInitWarn: true });
+            const callValue = await this.contract(api).query.balanceOf(caller.address, { gasLimit: this.defaultGas(api)}, wallet.address);
+            if (callValue.result.isOk) {
+                return Ok(callValue.output!.toPrimitive() as number);
+            } else {
+                return Err(new Error(`Could not get wallet ballance: ${callValue.result.asErr.toHuman()}`));
+            }
+        } catch (error: any) {
+            log.error(getTrace(error));
+            return Err(getBalanceFailedError);
+        }
+        
+    }
+
+    defaultGas(api: ApiPromise): any {
+        return api.registry.createType("WeightV2", {
+            refTime: new BN("10000000000"),
+            proofSize: new BN("10000000000"),
+          });
+    }
 }
