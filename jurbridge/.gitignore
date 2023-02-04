@@ -1,6 +1,6 @@
 # Ignore build artifacts from the local tests sub-crate.
 /target/
-!/target/ink/jurbridge.contract
+!target/ink/jurbridge.contract
 
 # Ignore backup files creates by cargo fmt.
 **/*.rs.bk
