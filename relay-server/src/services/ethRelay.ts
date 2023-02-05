@@ -41,7 +41,7 @@ abstract class BalanceContract {
   
 
   /**
-   * 
+   * Get the balance associated with this contract for a given account
    * @param {string} caller -  The account that is calling the function
    * @param {string} target -  The account with the balances you want to query
    * @returns {Promise<Result<number, Error>>} Balance of wallet if successful otherwise {@link Error}

@@ -21,6 +21,14 @@ For a given ETH wallet:
 
 ```
 
+# Directories
+- `jur-token/`
+Contains the `solidity` contracts used to represent the original VIP-180 token and the bridge contract that holds funds at the contract address when a transfer is requested.
+- `jurbridge/`
+Holds the `ink!`contract used to mint new ERC20 compliant tokens on the parachain.
+- `relay-server/`
+Contains the `npm` server used to operate the off-chain relay.
+
 
 # Testing
 ---
