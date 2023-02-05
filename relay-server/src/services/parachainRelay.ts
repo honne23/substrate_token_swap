@@ -18,34 +18,7 @@ const queryFailedError = new Error("could not query substrate");
 const transactionFailedError = new Error("submitting substrate transaction failed");
 const getBalanceFailedError = new Error("could not query balance on wallet")
 
-interface ISubstrateContract {
-    ownerPair: () => Promise<KeyringPair>,
-    contract: (api: ApiPromise) => ContractPromise,
-    provider: WsProvider,
-}
-
-export interface ISubstrateBridge extends ISubstrateContract {
-    /**
-     * A function that mints tokens on the substrate parachain of equivalent amount to those emitted in the ETH event
-     * @param {string} from - ETH wallet of incoming funds
-     * @param {KeyringPair} to - Substrate keyring to transfer funds to
-     * @param {number} value - Non negative amount to transfer
-     * @returns {Promise<Result<None, Error>>} Empty {@link Result} if successful otherwise {@link Error}
-     */
-    mintSubstrate(from: string, to: KeyringPair, value: number): Promise<Result<None, Error>>
-
-    /**
-     * 
-     * @param {KeyringPair} wallet - The {@link KeyringPair} to inspect balance
-     * @param {KeyringPair} caller - The function caller
-     * @returns {Promise<Result<number, Error>>} Balance of wallet if successful otherwise {@link Error}
-     */
-    getBalance(caller: KeyringPair, wallet: KeyringPair): Promise<Result<number, Error>>
-}
-
-
-export class ParachainBridge implements ISubstrateBridge {
-
+export abstract class SubstrateContract {
     ownerPair: () => Promise<KeyringPair>;
     contract: (api: ApiPromise) => ContractPromise;
     provider: WsProvider;
@@ -62,8 +35,46 @@ export class ParachainBridge implements ISubstrateBridge {
         this.provider = provider;
     }
 
+    /**
+     * 
+     * @param {KeyringPair} wallet - The {@link KeyringPair} to inspect balance
+     * @param {KeyringPair} caller - The function caller
+     * @returns {Promise<Result<number, Error>>} Balance of wallet if successful otherwise {@link Error}
+     */
+    async getBalance(caller: KeyringPair, wallet: KeyringPair): Promise<Result<number, Error>> {
+        try {
+            const api = await ApiPromise.create({ provider: this.provider, noInitWarn: true });
+            const callValue = await this.contract(api).query.balanceOf(caller.address, { gasLimit: this.defaultGas(api)}, wallet.address);
+            if (callValue.result.isOk) {
+                return Ok(callValue.output!.toPrimitive() as number);
+            } else {
+                return Err(new Error(`Could not get wallet ballance: ${callValue.result.asErr.toHuman()}`));
+            }
+        } catch (error: any) {
+            log.error(getTrace(error));
+            return Err(getBalanceFailedError);
+        }
+        
+    }
+
+    defaultGas(api: ApiPromise): any {
+        return api.registry.createType("WeightV2", {
+            refTime: new BN("10000000000"),
+            proofSize: new BN("10000000000"),
+          });
+    }
+}
 
 
+
+export class ParachainBridge extends SubstrateContract {
+    /**
+     * A function that mints tokens on the substrate parachain of equivalent amount to those emitted in the ETH event
+     * @param {string} from - ETH wallet of incoming funds
+     * @param {KeyringPair} to - Substrate keyring to transfer funds to
+     * @param {number} value - Non negative amount to transfer
+     * @returns {Promise<Result<None, Error>>} Empty {@link Result} if successful otherwise {@link Error}
+     */
     async mintSubstrate(from: string, to: KeyringPair, value: number): Promise<Result<None, Error>> {
         if (value <= 0) {
             return Err(invalidAmountError);
@@ -124,26 +135,5 @@ export class ParachainBridge implements ISubstrateBridge {
         }
       }
 
-    async getBalance(caller: KeyringPair, wallet: KeyringPair): Promise<Result<number, Error>> {
-        try {
-            const api = await ApiPromise.create({ provider: this.provider, noInitWarn: true });
-            const callValue = await this.contract(api).query.balanceOf(caller.address, { gasLimit: this.defaultGas(api)}, wallet.address);
-            if (callValue.result.isOk) {
-                return Ok(callValue.output!.toPrimitive() as number);
-            } else {
-                return Err(new Error(`Could not get wallet ballance: ${callValue.result.asErr.toHuman()}`));
-            }
-        } catch (error: any) {
-            log.error(getTrace(error));
-            return Err(getBalanceFailedError);
-        }
-        
-    }
-
-    defaultGas(api: ApiPromise): any {
-        return api.registry.createType("WeightV2", {
-            refTime: new BN("10000000000"),
-            proofSize: new BN("10000000000"),
-          });
-    }
+    
 }

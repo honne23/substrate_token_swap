@@ -95,6 +95,11 @@ For help, see: https://nodejs.org/en/docs/inspector
 **See `relay-server/tests/integration.ts` for example usage**
 
 #### Testing using REST
+Start the server:
+```bash
+cd relay-server/
+npm run start
+```
 You can query the relay server using rest endpoints as follows:
 ```bash
 curl -XPOST http://localhost:8080/register -d '{"eth":"0x7FB215F9Eb718e0757182Ae9a3A596Bcf0b1c40d", "uri":"//Alice"}' -H "Content-Type: application/json"

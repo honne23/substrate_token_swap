@@ -2,7 +2,7 @@ import { BridgeContract,  TokenContract, } from "../src/services/ethRelay";
 import { IDatabase, MemoryDatabase } from "../src/models/db";
 import { Bridge } from "../src/services/bridge";
 import { WsProvider,  } from '@polkadot/api';
-import { ISubstrateBridge, ParachainBridge } from "../src/services/parachainRelay";
+import { ParachainBridge } from "../src/services/parachainRelay";
 import { expect } from 'chai';
 import * as dotenv from 'dotenv';
 import { Type } from "typescript";
@@ -14,7 +14,7 @@ const testPublic = "0x7FB215F9Eb718e0757182Ae9a3A596Bcf0b1c40d";
 const testPrivate = "0x9fed92bcfe9c078c15d3548e5763c17dde60715ce5fdca5c70f2bfd14b08a4e4";
 
 
-const getProviders = (): [IDatabase, TokenContract, BridgeContract, ISubstrateBridge, Bridge] => {
+const getProviders = (): [IDatabase, TokenContract, BridgeContract, ParachainBridge, Bridge] => {
     
     const tokenContract = new TokenContract(
         process.env.ETH_TOKEN_CONTRACT_ADDRESS!, 
