@@ -57,8 +57,6 @@ describe("ETH to Substrate test", () => {
         (await db.registerUser(testPublic, "//Alice")).unwrap();
         const paraId = db.getUser(testPublic).unwrap();
 
-        // Get current balances
-        const tokenBalance = (await tokenContract.getBalance(tokenContract.ownerPublic)).unwrap();
         const bridgeBalance = (await bridgeContract.getBalance(testPublic)).unwrap()
         const parachainBalance = (await parachainBridge.getBalance(paraId, (await parachainBridge.ownerPair()))).unwrap()
 
@@ -67,6 +65,10 @@ describe("ETH to Substrate test", () => {
 
         // Transfer to Tokens to test address from original contract
         (await tokenContract.transferJUR(testPublic, transferAmount)).unwrap();
+
+        // Get current balance of the test wallet
+        const ethUserBalance = (await tokenContract.getBalance(testPublic)).unwrap();
+
 
         // Transfer funds from test address into bridge address
         (await bridgeRelay.transferFunds({
@@ -82,12 +84,12 @@ describe("ETH to Substrate test", () => {
         
 
         // Get post transfer balances
-        const postTokenBalance = (await tokenContract.getBalance(tokenContract.ownerPublic)).unwrap();
+        const postEthUserBalance = (await tokenContract.getBalance(testPublic)).unwrap();
         const postBridgeBalance = (await bridgeContract.getBalance(testPublic)).unwrap();
         const postParachainBalance = (await parachainBridge.getBalance(paraId, (await parachainBridge.ownerPair()))).unwrap();
 
         // Check balances on all chains and wallets match expectations
-        expect(tokenBalance - transferAmount).to.be.eq(postTokenBalance);
+        expect(ethUserBalance - transferAmount).to.be.eq(postEthUserBalance);
         expect(bridgeBalance + transferAmount).to.be.eq(postBridgeBalance);
         expect(parachainBalance + transferAmount).to.be.eq(postParachainBalance);
         

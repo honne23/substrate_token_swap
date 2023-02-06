@@ -47,7 +47,7 @@ export abstract class SubstrateContract {
             if (callValue.result.isOk) {
                 return Ok(callValue.output!.toPrimitive() as number);
             } else {
-                return Err(new Error(`Could not get wallet ballance: ${callValue.result.asErr.toHuman()}`));
+                return Err(new Error(`Could not get wallet ballance: ${callValue.result.asErr}`));
             }
         } catch (error: any) {
             log.error(getTrace(error));
