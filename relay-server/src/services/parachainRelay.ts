@@ -10,7 +10,6 @@ import { Ok, Err, Result, None, Option } from "ts-results";
 import { Logger } from 'tslog';
 import { getTrace, invalidAmountError } from '../utils/utils';
 import { ISubmittableResult } from '@polkadot/types/types';
-import { bytesToHex, hexToNumber } from 'web3-utils';
 
 const log = new Logger();
 
