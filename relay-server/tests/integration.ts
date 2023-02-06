@@ -39,13 +39,7 @@ const getProviders = (): [IDatabase, TokenContract, BridgeContract, ParachainBri
 
     const bridgeRelay = new Bridge(tokenContract, bridgeContract, parachainBridge);
     return [database, tokenContract, bridgeContract, parachainBridge, bridgeRelay];
-}
-
-function expectOk<T,E>(result: Result<T,E>, message: string) {
-    expect(result.ok, message).to.be.true;
-}
-
-
+} 
 
 
 describe("ETH to Substrate test", () => {
