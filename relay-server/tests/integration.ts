@@ -5,8 +5,6 @@ import { WsProvider,  } from '@polkadot/api';
 import { ParachainBridge } from "../src/services/parachainRelay";
 import { expect } from 'chai';
 import * as dotenv from 'dotenv';
-import { Type } from "typescript";
-import { Ok, Result } from "ts-results";
 
 dotenv.config();
 

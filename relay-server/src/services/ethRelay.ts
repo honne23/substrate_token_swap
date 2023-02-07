@@ -29,10 +29,10 @@ abstract class BalanceContract {
     ownerKey: string;
     web3: Web3;
 
-    constructor(contractAddress:string, ownerKey: string, ownerPublic: string, host: string) {
+    constructor(contractAddress:string, ownerKey: string, ownerPublic: string, host: string, abi: any) {
       this.web3  = new Web3(Web3.givenProvider || host);
         this.contractMetadata = {
-            contract: new this.web3.eth.Contract(tokenAbi as unknown as AbiItem, contractAddress),
+            contract: new this.web3.eth.Contract(abi as unknown as AbiItem, contractAddress),
             address: contractAddress
         };
         this.ownerKey = ownerKey;
@@ -54,6 +54,10 @@ abstract class BalanceContract {
 
 
 export class TokenContract extends BalanceContract  {
+
+  constructor(contractAddress:string, ownerKey: string, ownerPublic: string, host: string) {
+      super(contractAddress, ownerKey, ownerPublic, host, tokenAbi);
+  }
 
     /** Transfer some JUR funds to a wallet on ethereum
    * @param {string} to - The eth wallet to transfer funds to
@@ -101,7 +105,7 @@ export class BridgeContract extends BalanceContract {
 
 
     constructor(contractAddress:string, ownerKey: string, ownerPublic: string, host: string,  tokenContract: TokenContract) {
-        super(contractAddress, ownerKey, ownerPublic, host);
+        super(contractAddress, ownerKey, ownerPublic, host, bridgeAbi);
         this.tokenContract = tokenContract;
     }
 
